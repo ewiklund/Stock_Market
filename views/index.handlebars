@@ -1,0 +1,302 @@
+
+	<h1 class="center">Monthly Stock Analysis</h1>
+	<div class="container">
+		<div class="row">
+			<canvas id="canvas"></canvas>
+			<h2 class="center">Add a stock to See Analysis</h2>
+			<div id="main">
+
+			</div><br>
+		</div>
+
+			<div class="center">
+				<form>
+				<div class="row">
+					<div class="form-group col-xs-12 col-sm-10">
+						<input id="stockField" class="form-control" type="string" name="stock" placeholder="Enter Stock Code">
+					</div>
+					<div class="col-xs-12 col-sm-2">
+						<button class="btn btn-primary btn-block">Add</button>
+					</div>
+
+				</div>
+				</form>
+				<p id="error"></p>
+			</div>
+
+	</div>
+	<script src="/socket.io/socket.io.js"></script>
+	<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+	<script type="text/javascript" src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+
+	<script type="text/javascript" src="https://momentjs.com/downloads/moment.js"></script>
+	<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.6.0/Chart.min.js"></script>
+	<script type="text/javascript">
+
+		function template(name) {
+			/* Adds a new alert div for the given stock */
+			let a = " <br><div class='stockCode alert alert-dismissible ' role='alert'>" +
+				'<button type="button" class="close" data-dismiss="alert" aria-label="Close">' +
+				'<span id=' + name +' class="selectIt" aria-hidden="true">&times;</span></button>' +
+				"<h3 class='stockName'>"+ name.toUpperCase() +"</h3><br><p> " +
+				"Prices, Dividends and Splits</p>" +
+				"</div>";
+			console.log("worked");
+			return a;
+		}
+
+
+		/* Handle socket */
+		$(function () {
+			var ctx = document.getElementById("canvas").getContext("2d");
+			var myChart = null;
+
+			function drawChart(chartData) {
+				let chartColors = {
+					red: 'rgb(255, 99, 132)',
+					orange: 'rgb(255, 159, 64)',
+					yellow: 'rgb(255, 205, 86)',
+					green: 'rgb(75, 192, 192)',
+					blue: 'rgb(54, 162, 235)',
+					purple: 'rgb(153, 102, 255)',
+					grey: 'rgb(201, 203, 207)'
+				};
+				let colors = ["red", "orange", "yellow", "green",
+								"blue", "purple", "grey"];
+
+				let datasets = [];
+				if (chartData.length == 0) {
+					window.myLine = new Chart(ctx, []);
+					return;
+				}
+				let labels = chartData[0].date;
+				for (let i in chartData) {
+					let col = chartColors[colors[i %colors.length]];
+					let obj = {
+						label: chartData[i].label.toUpperCase(),
+						data: chartData[i].data,
+						backgroundColor: col,
+						borderColor: col,
+						fill: false
+					};
+					datasets.push(obj);
+				}
+
+				var config = {
+					type: "line",
+					data: {
+						labels: labels,
+						datasets :datasets
+					},
+					options: {
+		                responsive: true,
+		                title:{
+		                    display:true,
+		                    text:'Stocks Market'
+		                },
+		                tooltips: {
+		                    mode: 'index',
+		                    intersect: false,
+		                },
+		                hover: {
+		                    mode: 'nearest',
+		                    intersect: true
+		                },
+		                scales: {
+		                    xAxes: [{
+		                        display: true,
+		                        type:"time",
+		                        scaleLabel: {
+		                            display: true,
+		                            labelString: 'Month'
+		                        }
+		                    }],
+		                    yAxes: [{
+		                        display: true,
+		                        scaleLabel: {
+		                            display: true,
+		                            labelString: 'Value'
+		                        }
+		                    }]
+		                }
+            		}
+				};
+
+				$("h2.center").html("");
+				if (myChart) {
+					myChart.destroy();
+
+					myChart = new Chart(ctx, config);
+				}
+				else {
+					myChart = new Chart(ctx, config);
+				}
+			}
+
+			// TEST START
+			//drawChart([]);
+
+			var chartData = [];
+			var stockCount = 0;
+			// TEST END
+
+			// EMPTY CHART START
+			function deleteChart() {
+				if (myChart) {
+					myChart.destroy();
+				}
+				$("h2.center").html("Add a stock to See Analysis");
+			}
+			//debugger;
+			// EMPTY CHART END
+
+
+			var list = [];
+		    var socket = io();
+
+		    // send request to include the stock
+		    $('form').submit(function(){
+
+		    	let code = $("#stockField").val();
+		    	let isPresent = false;
+		    	list = [];
+		    	for (let i in chartData) {
+		    		if (chartData[i].label == code) {
+		    			isPresent = true;
+		    		}
+		    		list.push(chartData[i].label);
+		    	}
+
+
+		    	if (!isPresent) {
+			    	socket.emit('stock code', [$('#stockField').val().toLowerCase(), list]);
+		    	}
+		     	$('#stockField').val('');
+				return false;
+		    });
+
+		    // stock infromation received, if no erorr is found, add the
+		    // stock to the list, update chart
+		    socket.on('stock code', function(stockInfo){
+		    	if (stockInfo["Error Message"]) {
+		    		$("#error").html("Incorrect Stock Code Entered");
+		    	}
+		    	else {
+		    		stockCount++;
+
+			    	chartingData = stockInfo["Monthly Time Series"];
+			    	list = stockInfo.sofar;
+
+			      	$(template(stockInfo["Meta Data"]["2. Symbol"])).appendTo("#main");
+			      	$("#error").html("");
+
+			      	// TODO: Chart the data
+			      	let date = [];
+			      	let stockPrice = [];
+			      	let label = stockInfo["Meta Data"]["2. Symbol"];
+			      	let count = 0;
+			      	for (let i in chartingData) {
+			      		if (chartingData.hasOwnProperty(i)) {
+			      			//console.log(i);
+			      			date.push(i);
+			      			stockPrice.push(chartingData[i]["1. open"]);
+			      		}
+			      		count++;
+			      		if (count >= 20) {
+			      			break;
+			      		}
+			      	}
+
+			      	let data = {label: label, date: date, data: stockPrice};
+			      	chartData.push(data);
+
+			      	if (stockCount == 0) {
+			      		deleteChart();
+			      	}
+			      	else {
+				      	if (chartData.length == stockCount) {
+				      		console.log(chartData.length, list.length);
+				      		drawChart(chartData);
+				      	}
+			      	}
+
+		      	}
+			});
+
+		    // sent by server to other recipients, remove code, update chart
+		    // and remove the stock from the list
+			socket.on('removeStock', function(response) {
+		    	console.log("called", response);
+
+		    	$("#" + response.code).parent().parent().remove();
+
+		    	list = response.list;
+
+		    	// TODO: modify chart data
+		    	index = -1;
+		    	for (var i in chartData) {
+		    		console.log(chartData[i]);
+		    		if (chartData[i].label == response.code) {
+		    			index = i;
+		    			break
+		    		}
+		    	}
+
+		    	if (index > -1) {
+		    		stockCount--;
+		    		console.log(stockCount);
+
+		    		chartData.splice(index, 1);
+			    	drawChart(chartData);
+		    	}
+
+		    	if (stockCount == 0) {
+		    		deleteChart();
+		    	}
+		    });
+
+			// remove the stock from current user, update current user's chart
+			// update list and send server request to render other live users
+		    $('body').click(function(e) {
+
+			    var target = $(e.target);
+			    if (target[0].nodeName == "SPAN" && target[0].className == 'selectIt') {
+			    	let code = target[0].id;
+					let index = list.indexOf(code);
+
+			    	if (index > -1) {
+			    		list.splice(index, 1);
+			    	}
+
+			    	socket.emit('deleteStock', [code,list]);
+
+			    	// TODO: Modify chart data
+			    	index = -1;
+			    	for (var i in chartData) {
+			    		console.log(chartData[i]);
+			    		if (chartData[i].label == code) {
+			    			index = i;
+			    			break
+			    		}
+			    	}
+
+			    	if (index > -1) {
+			    		stockCount--;
+			    		console.log(stockCount);
+
+			    		chartData.splice(index, 1);
+				    	drawChart(chartData);
+			    	}
+
+			    	if (stockCount == 0) {
+		    			deleteChart();
+		    		}
+
+			    }
+			});
+
+
+		});
+
+
+	</script>

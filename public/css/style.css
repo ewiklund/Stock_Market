@@ -1,0 +1,25 @@
+.center {
+  text-align: center;
+}
+
+#main {
+	display: flex;
+	flex-wrap: wrap;
+	flex-direction: row;
+	flex-grow: 1;
+}
+
+.stockCode {
+	background-color: #eee;
+	flex: auto;
+	margin: 2em;
+}
+
+.stockName {
+	margin: 0;
+}
+
+#error {
+	color: rgb(220, 20, 60);
+	font-size: 1.3em;
+}
